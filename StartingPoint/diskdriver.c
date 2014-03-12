@@ -3,6 +3,17 @@
 //#include "freesectordescriptorstore.h"
 #include "stdlib.h"
 #include "stdio.h"
+#include "sectordescriptor.h"
+#include "block.h"
+#include "pid.h"
+#include "freesectordescriptorstore.h"
+#include "diskdevice.h"
+#include "voucher.h"
+#include "freesectordescriptorstore_full.h"
+#include "sectordescriptorcreator.h"
+#include "BoundedBuffer.h"
+#include "unistd.h"
+#include "pthread.h"
 
 /*
  * This file is a component of the test harness and/or sample solution
@@ -16,17 +27,6 @@
  * a disk device
  */
 
-#include "sectordescriptor.h"
-#include "block.h"
-#include "pid.h"
-#include "freesectordescriptorstore.h"
-#include "diskdevice.h"
-#include "voucher.h"
-#include "freesectordescriptorstore_full.h"
-#include "sectordescriptorcreator.h"
-#include "BoundedBuffer.h"
-#include "unistd.h"
-#include "pthread.h"
 
 
 // let Voucher be a pointer type on struct Voucher_s 
@@ -73,24 +73,20 @@ struct Voucher_s* malloc_voucher(){
 
 //useful globals.
 static DiskDevice DISK;
-static const int BUFFER_SIZE = 100;
-static BoundedBuffer WRITE_BUFFER;
-static BoundedBuffer READ_BUFFER;
+static const int BUFFER_SIZE = 3000;
+static BoundedBuffer BUFFER;
 static pthread_t READER_ID;
-static pthread_t WRITER_ID;
 static FreeSectorDescriptorStore STORE;
 
-void reader_thread(){
+void consumer_thread(){
     while(1){
-        struct Voucher_s* v = (struct Voucher_s*) (Voucher) blockingReadBB(READ_BUFFER);
-        int success = -1; 
+        struct Voucher_s* v = (struct Voucher_s*) (Voucher) blockingReadBB(BUFFER);
         if(v->read == 1){
             v->successful = read_sector(DISK, v->sd);
             pthread_cond_broadcast(&(v->condition));
         } else if (v->read == 0) {
             v->successful = write_sector(DISK, v->sd);
             pthread_cond_broadcast(&(v->condition));
-            //blocking_put_sd(STORE, *(v->sd));
         } else {
             printf("error in reader_thread\n");
             exit(1);
@@ -105,11 +101,11 @@ void init_disk_driver(DiskDevice dd, void *mem_start, unsigned long mem_length,
     create_free_sector_descriptors(STORE, mem_start, mem_length);
     *fsds_ptr = STORE;
     DISK = dd;
-    WRITE_BUFFER = createBB(BUFFER_SIZE);
-    READ_BUFFER = createBB(BUFFER_SIZE);
+    
+    BUFFER = createBB(BUFFER_SIZE);
     
     
-    pthread_create(&READER_ID, NULL, (void*(*)(void*)) &reader_thread, NULL);
+    pthread_create(&READER_ID, NULL, (void*(*)(void*)) &consumer_thread, NULL);
     //sleep(1);
     
     //wait_on_cond();
@@ -134,14 +130,14 @@ void blocking_write_sector(SectorDescriptor sd, Voucher *v){
     *(voucher->sd) = sd;
     voucher->read = 0;
     *v = (Voucher) voucher;
-    blockingWriteBB(READ_BUFFER, voucher);
+    blockingWriteBB(BUFFER, voucher);
 }
 int nonblocking_write_sector(SectorDescriptor sd, Voucher *v){
     struct Voucher_s* voucher = malloc_voucher();
     *(voucher->sd) = sd;
     voucher->read = 0;
     *v = (Voucher) voucher;
-    return nonblockingWriteBB(READ_BUFFER, voucher);
+    return nonblockingWriteBB(BUFFER, voucher);
 
 }
 
@@ -160,14 +156,14 @@ void blocking_read_sector(SectorDescriptor sd, Voucher *v){
     *(voucher->sd) = sd;
     voucher->read = 1;
     *v = (Voucher) voucher;
-    blockingWriteBB(READ_BUFFER, voucher);
+    blockingWriteBB(BUFFER, voucher);
 }
 int nonblocking_read_sector(SectorDescriptor sd, Voucher *v){
     struct Voucher_s* voucher = malloc_voucher();
     *(voucher->sd) = sd;
     voucher->read = 1;
     *v = (Voucher) voucher;
-    return nonblockingWriteBB(READ_BUFFER, voucher);
+    return nonblockingWriteBB(BUFFER, voucher);
 }
 
 /*

@@ -1,5 +1,5 @@
 CFLAGS=-W -Wall -g
-COMP=clang
+COMP=gcc
 
 #mydriver: sectordescriptorcreator.h freesectordescriptorstore_full.h \
 #          freesectordescriptorstore.h diskdriver.c freesectordescriptorstore.o
