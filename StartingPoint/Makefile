@@ -1,4 +1,5 @@
 CFLAGS=-W -Wall -g
+COMP=clang
 
 #mydriver: sectordescriptorcreator.h freesectordescriptorstore_full.h \
 #          freesectordescriptorstore.h diskdriver.c freesectordescriptorstore.o
@@ -16,10 +17,10 @@ OBJECTS=BoundedBuffer.o diagnostics.o freesectordescriptorstore.o \
         diskdevice.o diskdriver.o
 
 demo: $(OBJECTS)
-	cc -o demo $(OBJECTS) -lpthread $(CFLAGS)
+	$(COMP) -o demo $(OBJECTS) -lpthread $(CFLAGS)
 
 mydriver: $(OBJECTS_MY)
-	cc -o mydriver $(OBJECTS_MY) -lpthread $(CFLAGS)
+	$(COMP) -o mydriver $(OBJECTS_MY) -lpthread $(CFLAGS)
 
 #BoundedBuffer.o: BoundedBuffer.h BoundedBuffer.c
 #diagnostics.o: diagnostics.h diagnostics.c
@@ -34,4 +35,4 @@ mydriver: $(OBJECTS_MY)
 #fakeapplications.o: fakeapplications.h fakeapplications.c
 #diskdevice.o: diskdevice.h diskdevice.c
 diskdriver.o: diskdriver.h diskdriver.c 
-	cc -c diskdriver.c -o diskdriver.o $(CFLAGS)
+	$(COMP) -c diskdriver.c -o diskdriver.o $(CFLAGS)
